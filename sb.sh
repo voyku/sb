@@ -13,7 +13,9 @@ blue(){ echo -e "\033[36m\033[01m$1\033[0m";}
 white(){ echo -e "\033[37m\033[01m$1\033[0m";}
 readp(){ read -p "$(yellow "$1")" $2;}
 [[ $EUID -ne 0 ]] && yellow "请以root模式运行脚本" && exit
-
+PACKAGE_UPDATE=("apt -y update" "apt -y update" "yum -y update" "yum -y update" "pacman -Sy" "apk update -f" "dnf -y update")
+PACKAGE_INSTALL=("apt -y install" "apt -y install" "yum -y install" "yum -y install" "pacman -S --noconfirm" "apk add --no-cache" "dnf -y install")
+PACKAGE_UNINSTALL=("apt -y autoremove" "apt -y autoremove" "yum -y autoremove" "yum -y autoremove" "pacman -Rcnsu --noconfirm" "apk del -f" "dnf -y autoremove")
 #判定系统
 	if [[ -f /etc/redhat-release ]]; then
 	release="Centos"
@@ -64,13 +66,18 @@ ins () {
 }
 
 check_env () {	
-    apt update -y &>/dev/null || yum update -y &>/dev/null && yum install epel-release -y &>/dev/null || dnf update -y &>/dev/null; 
-	packages=("curl" "openssl" "jq" "iptables" "iptables-persistent" "tar" "qrencode" "wget" "cron" "cronie")
-	for package in "${packages[@]}"
-	do
-	command -v "$package" &>/dev/null || ins "$package";
-	done
-
+  # 检测 Linux 系统的依赖，升级库并重新安装依赖
+  unset DEPS_CHECK DEPS_INSTALL DEPS
+  DEPS_CHECK=("wget" "systemctl" "ip" "unzip" "lsof" "bash" "openssl" "curl" "openssl" "jq"  "tar" "qrencode"  "cron")
+  DEPS_INSTALL=("wget" "systemctl" "iproute2" "unzip" "lsof" "bash" "openssl" "curl" "openssl" "jq"  "tar" "qrencode"  "cron")
+  for g in "${!DEPS_CHECK[@]}"; do [ ! $(type -p ${DEPS_CHECK[g]}) ] && [[ ! "${DEPS[@]}" =~ "${DEPS_INSTALL[g]}" ]] && DEPS+=(${DEPS_INSTALL[g]}); done
+  if [ "${#DEPS[@]}" -ge 1 ]; then
+    echo "\n 安装依赖列表 ${DEPS[@]} \n"
+    ${PACKAGE_UPDATE[int]} 
+    ${PACKAGE_INSTALL[int]} ${DEPS[@]} 
+  else
+    echo "\n 所有依赖已存在 \n"
+  fi
 if [[ $release = Centos && ${vsid} =~ 8 ]]; then
 	cd /etc/yum.repos.d/ && mkdir backup && mv *repo backup/ 
 	curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-8.repo
@@ -130,38 +137,7 @@ v6(){
 	systemctl start warp-go >/dev/null 2>&1
 	fi
 }
-close(){
-	systemctl stop firewalld.service >/dev/null 2>&1
-	systemctl disable firewalld.service >/dev/null 2>&1
-	setenforce 0 >/dev/null 2>&1
-	ufw disable >/dev/null 2>&1
-	iptables -P INPUT ACCEPT >/dev/null 2>&1
-	iptables -P FORWARD ACCEPT >/dev/null 2>&1
-	iptables -P OUTPUT ACCEPT >/dev/null 2>&1
-	iptables -t mangle -F >/dev/null 2>&1
-	iptables -F >/dev/null 2>&1
-	iptables -X >/dev/null 2>&1
-	netfilter-persistent save >/dev/null 2>&1
-	if [[ -n $(apachectl -v 2>/dev/null) ]]; then
-	systemctl stop httpd.service >/dev/null 2>&1
-	systemctl disable httpd.service >/dev/null 2>&1
-	service apache2 stop >/dev/null 2>&1
-	systemctl disable apache2 >/dev/null 2>&1
-	fi
-	sleep 1
-	green "执行开放端口，关闭防火墙完毕"
-}
-openyn(){
-	red "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	readp "是否开放端口，关闭防火墙？\n1、是，执行 (回车默认)\n2、否，我自已手动\n请选择：" action
-	if [[ -z $action ]] || [[ "$action" = "1" ]]; then
-	close
-	elif [[ "$action" = "2" ]]; then
-	echo
-	else
-	red "输入错误,请重新选择" && openyn
-	fi
-}
+
 inssb(){
 	red "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	green "一、开始安装Sing-box正式版内核……"
@@ -1218,7 +1194,7 @@ instsllsingbox(){
 	if [[ -f '/etc/systemd/system/sing-box.service' ]]; then
 	red "已安装Sing-box服务，无法再次安装" && exit
 	fi
-	check_env ; v6 ; openyn ; inssb ; inscertificate ; insport
+	check_env ; v6  ; inssb ; inscertificate ; insport
 	echo
 	blue "Vless-reality相关key与id将自动生成……"
 	key_pair=$(/etc/s-box/sing-box generate reality-keypair)
