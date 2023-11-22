@@ -1937,7 +1937,7 @@ cronsb(){
 	rm /tmp/crontab.tmp
 }
 uncronsb(){
-	crontab -l > /tmp/crontab.tmp
+	crontab -l > /tmp/crontab.tmp >/dev/null 2>&1
 	sed -i '/sing-box/d' /tmp/crontab.tmp
 	sed -i '/argo.log/d' /tmp/crontab.tmp
 	crontab /tmp/crontab.tmp
