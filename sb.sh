@@ -61,10 +61,6 @@ else
 bbr="Openvz/Lxc"
 fi
 
-ins () {      
-    apt install -y -q $1 &>/dev/null || yum install -q -y $1 &>/dev/null || dnf install -q -y $1 &>/dev/null;		
-}
-
 check_env () {	
   # 检测 Linux 系统的依赖，升级库并重新安装依赖
   unset DEPS_CHECK DEPS_INSTALL DEPS
