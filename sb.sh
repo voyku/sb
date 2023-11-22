@@ -68,15 +68,15 @@ ins () {
 check_env () {	
   # 检测 Linux 系统的依赖，升级库并重新安装依赖
   unset DEPS_CHECK DEPS_INSTALL DEPS
-  DEPS_CHECK=("wget" "systemctl" "ip" "unzip" "lsof" "bash" "openssl" "curl" "openssl" "jq"  "tar" "qrencode"  "cron")
-  DEPS_INSTALL=("wget" "systemctl" "iproute2" "unzip" "lsof" "bash" "openssl" "curl" "openssl" "jq"  "tar" "qrencode"  "cron")
+  DEPS_CHECK=("wget" "systemctl" "ip" "unzip" "lsof" "bash" "openssl" "curl" "openssl" "jq"  "tar" "qrencode"  "cron" "crontab")
+  DEPS_INSTALL=("wget" "systemctl" "iproute2" "unzip" "lsof" "bash" "openssl" "curl" "openssl" "jq"  "tar" "qrencode"  "cron" "crontab")
   for g in "${!DEPS_CHECK[@]}"; do [ ! $(type -p ${DEPS_CHECK[g]}) ] && [[ ! "${DEPS[@]}" =~ "${DEPS_INSTALL[g]}" ]] && DEPS+=(${DEPS_INSTALL[g]}); done
   if [ "${#DEPS[@]}" -ge 1 ]; then
-    echo "\n 安装依赖列表 ${DEPS[@]} \n"
+    green " 安装依赖列表 ${DEPS[@]} "
     ${PACKAGE_UPDATE[int]} 
     ${PACKAGE_INSTALL[int]} ${DEPS[@]} 
   else
-    echo "\n 所有依赖已存在 \n"
+    green " 所有依赖已存在  "
   fi
 if [[ $release = Centos && ${vsid} =~ 8 ]]; then
 	cd /etc/yum.repos.d/ && mkdir backup && mv *repo backup/ 
